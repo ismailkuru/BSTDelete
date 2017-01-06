@@ -4,34 +4,36 @@
 		Node *prev = NULL;
 		Node *cur = root;
 		Node *del = NULL;
-		spec{prev:NULL, curr:rcuItr(root,1) empty N}
+		spec{prev:NULL, curr:rcuItr(root,0) empty N[]}
+		//Note : epsilonL1 >=1
 		while (cur&&cur->_key!=key)
 		{
-	spec{curr:rcuItr(root,epsilon>=1) {...} N, prev:rcuItr(root,epsilon>=1){...} N[(left|right,epsilon>=1)->curr]}
+	spec{curr:rcuItr(root,epsilonL1) {...} N, prev:rcuItr(root,epsilonL1){...} N[(left|right,epsilonL1)->curr]}
 			if (cur->_key < key)
 			{
 				prev = cur;
-			spec{curr:rcuItr(root,epsilon){...} N, prev:rcuItr(root,epsilon){...} N}
+			spec{curr:rcuItr(root,epsilonL1){...} N, prev:rcuItr(root,epsilonL1){...} N}
 				cur = prev->right;
-			spec{curr:rcuItr(root,epsilon+1){...right} N, prev:rcuItr(root,epsilon){...} N[(right,epsilon>=1)->curr,(left,0)->curr]}
+		spec{curr:rcuItr(root,epsilonL1+1){...right} N, prev:rcuItr(root,epsilonL1){...} N[(right,epsilonL1)->curr,(left,0)->curr]}
 			}
 			else if (cur->key>key)
 			{
-			spec{prev:_, curr:rcuItr(root,epsilon){...} N}
+			spec{prev:_, curr:rcuItr(root,epsilonL1){...} N}
 				prev = cur;
-			spec{curr:rcuItr(root,epsilon){...} N, prev:rcuItr(root,epsilon){...} N}
+			spec{curr:rcuItr(root,epsilonL1){...} N, prev:rcuItr(root,epsilonL1){...} N}
 				cur = prev->left;
-			spec{curr:rcuItr(root,epsilon+1){...left} N, prev:rcuItr(root,epsilon){...} N[(left,epsilon>=1)->curr,(left,0)->curr]}
+		spec{curr:rcuItr(root,epsilonL1+1){...left} N, prev:rcuItr(root,epsilonL1){...} N[(left,epsilonL1)->curr,(left,0)->curr]}
 			}
 			else
 			{
 				break;
 			}
 
-	spec{curr:rcuItr(root,epsilon>=1+1){...left|right} N, prev:rcuItr(root,epsilon){...} N[(right|left,epsilon>=1)->curr]}		
+	spec{curr:rcuItr(root,epsilonL1+1){...left|right} N, prev:rcuItr(root,epsilon){...} N[(right|left,epsilonL1)->curr]}		
 		}
 
-	spec{curr:rcuItr(root,Epsilon) left {...} N, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr] }
+	//Epsilon can either be 0 or epsilon>=1
+	spec{curr:rcuItr(root,Epsilon) left {...} N, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilonL1)->curr] }
 
 		if (cur == NULL)
 		{
@@ -39,24 +41,23 @@
 		}
 		if (cur->left == NULL)
 		{
-
-			del = cur;
-	spec{curr:rcuItr(root,Epsilon) {...} N,del:rcuItr(root,Epsilon) {...} N}
+	spec{curr:rcuItr(root,Epsilon) {...} N}
+	//Note: This prev == NULL can be ignored
 			if (prev == NULL)
 			{
-				root = cur->right;
+				root = curr->right;
 			}
 			else
 			{
-
+					
 				Node* cr = curr->right;
 			spec{cr:rcuItr(root,Epsilon+1) {...} right N} 
 				if (prev->left == cur)
 				{
 			
 		spec{curr:rcuItr(root,Epsilon) {...} N[(right,Epsilon)->cr]}
-		spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr] }
-					prev->_left = cr;
+		spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilonL1)->curr] }
+					prev->left = cr;
 		spec{curr:unlinked, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr, (left,Epsilon)->cr] }
 				
 				}
@@ -64,20 +65,21 @@
 				{
 		
 		spec{curr:rcuItr(root,Epsilon) {...} N[(right,Epsilon)->cr]}
-		spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr] }
+		spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilonL1)->curr] }
 					prev->right = cr;
-		spec{curr:unlinked, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr, (right,Epsilon)->cr] }
+		spec{curr:unlinked, prev:rcuItr(root,Epsilon){...} N[(right,Epsilon)->cr] }
+					asyncDelayedFree(curr),
+					return true;
 				}
 			}
 		}
-		else if (cur->right==NULL)
+		else if (curr->right==NULL)
 		{
-			del = cur;
-		spec{curr:rcuItr(root,Epsilon) left {...} N,del:rcuItr(root,Epsilon) {...} N}
+		spec{curr:rcuItr(root,Epsilon) left {...} N}
 			if (prev == NULL)
 			{
-				cur = cur->left;
-			spec{curr:rcuItr(root,Epsilon+1) {...} left N,del:rcuItr(root,Epsilon) {...} N}
+				curr = curr->left;
+			spec{curr:rcuItr(root,Epsilon+1) {...} left N}
 			}
 			else
 			{
@@ -88,40 +90,43 @@
 				{
 
 			spec{curr:rcuItr(root,Epsilon) {...} N[(right,Epsilon)->cr,(left,Epsilon)->cl]}
-			spec{prev:rcuItr(root,Epsilon) {...} N[(right|left,epsilon)->curr] }
+			spec{prev:rcuItr(root,Epsilon) {...} N[(right|left,epsilonL1)->curr] }
 					parent->left = cl;
-			spec{curr:unlinked, prev:rcuItr(root,Epsilon) {...} N[(right|left,epsilon)->curr, (left,Epsilon)->cl] }
+			spec{curr:unlinked, prev:rcuItr(root,Epsilon) {...} N[(left,Epsilon)->cl] }
+					asyncDelayedFree(curr),
+					return true;
 
 				}
 				else
 				{
 			spec{curr:rcuItr(root,Epsilon) {...} N[(right,Epsilon)->cr,(left,Epsilon)->cl]}
-			spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr] }
+			spec{prev:rcuItr(root,Epsilon){...} N[(right|left,epsilonL1)->curr] }
 					prev->right = cr;
-			spec{curr:unlinked, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr, (right,Epsilon)->cr] }
-
+			spec{curr:unlinked, prev:rcuItr(root,Epsilon){...} N[(right,Epsilon)->cr] }
+					asyncDelayedFree(curr);
+					return true;
 				}
 			}
 
 		}
 		else
 		{
-		spec{curr:rcuItr(root,Epsilon) {...} N, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilon)->curr] }
+		spec{curr:rcuItr(root,Epsilon) {...} N, prev:rcuItr(root,Epsilon){...} N[(right|left,epsilonL1)->curr] }
 			Node *minright = cur->_right;
 		spec{curr:rcuItr(root,Epsilon) {...} N[(right,Epsilon)->minright]}
-		spec{prev:rcuItr(root,Epsilon) {...} N[(right|left,epsilon)->curr]}
+		spec{prev:rcuItr(root,Epsilon) {...} N[(right|left,epsilonL1)->curr]}
 		spec{minright:rcuItr(root,Epsilon+1) {...} right N }
 			while (minright->_left)
 			{
-		spec{prev:rcuItr(root,epsilonl1) {...} {right...} N[(right|left,epsilon)->curr,(left,epsilonl1)->minright ]}
+		spec{prev:rcuItr(root,epsilonl2) {...} {right...} N[(right|left,epsilonl1)->curr,(left,epsilonl2)->minright ]}
 		spec{minright:rcuItr(root,epsilonl1) {...} right {...} N}
 				prev = minright;
 				minright = prev->left;
-		spec{prev:rcuItr(root,epsilonl1) {right...} N[(right|left,epsilon)->curr,(left,epsilonl1)->minright ]}
+		spec{prev:rcuItr(root,epsilonl2) {...} {right...} N[(right|left,epsilonl1)->curr,(left,epsilonl2)->minright ]}
 		spec{minright:rcuItr(root,epsilonl1+1) {...} right {...left} N}
 
 			}
-		spec{prev:rcuItr(root,Epsilon+Epsilon1) {...} {right...} N[(right|left,epsilon)->curr,(left,epsilonl1)->minright]}
+		spec{prev:rcuItr(root,Epsilon+Epsilon1) {...} {right...} N[(right|left,epsilonl1)->curr,(left,epsilonl2)->minright]}
 		spec{minright:rcuItr(root,Epsilon+Epsilon1+1) {...} right {...} N}		
 		
 		Node* minrightr = minright->right;
