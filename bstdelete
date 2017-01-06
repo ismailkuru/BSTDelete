@@ -146,6 +146,7 @@
 
 			}
 			asyncDelayedFree(minright);
+			return true;
 		}
 		return true;
 	}
